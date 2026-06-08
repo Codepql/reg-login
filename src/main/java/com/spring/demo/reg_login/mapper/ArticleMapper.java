@@ -57,12 +57,14 @@ public interface ArticleMapper {
         insert into article(
             title,
             content,
-            author
+            author,
+            cover_img
         )
         values(
             #{title},
             #{content},
-            #{author}
+            #{author},
+            #{coverImg}
         )
     """)
     int insert(Article article);
@@ -80,7 +82,8 @@ public interface ArticleMapper {
         update article
         set
             title = #{title},
-            content = #{content}
+            content = #{content},
+            cover_img = #{coverImg}
         where id = #{id}
     """)
     int update(Article article);

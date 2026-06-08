@@ -14,5 +14,7 @@ public class Article {
 
     private String author;
 
+    private String coverImg;
+
     private LocalDateTime createTime;
 }

@@ -17,8 +17,8 @@ public class JwtUtils {
     // HMAC-SHA密钥对象
     private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
 
-    // Token有效期：3天（毫秒值）
-    private static final long EXPIRE = 1000L * 60 * 60 * 24 * 3;
+    // Token有效期：5天（毫秒值）
+    private static final long EXPIRE = 1000L * 60 * 60 * 24 * 5;
 
     // 生成Token
     public static String generateToken(String username) {

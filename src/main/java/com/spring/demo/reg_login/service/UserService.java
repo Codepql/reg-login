@@ -2,6 +2,7 @@ package com.spring.demo.reg_login.service;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.spring.demo.reg_login.common.Result;
 import com.spring.demo.reg_login.entity.User;
@@ -16,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 public class UserService {
 
     private final UserMapper userMapper;
+
+    private final StringRedisTemplate stringRedisTemplate;
 
     // BCrypt密码加密器：单向不可逆，每次结果不同（自带随机盐值）
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -58,6 +61,14 @@ public class UserService {
 
         // 3. 登录成功，生成JWT Token返回给前端
         String token = JwtUtils.generateToken(user.getUsername());
+
+        // 4. 将Token存入Redis，设置过期时间（与JWT一致）
+        stringRedisTemplate.opsForValue().set(
+            "login:" + user.getUsername(),
+            token, 
+            7, 
+            java.util.concurrent.TimeUnit.DAYS
+        );
 
         return Result.success(token);
 

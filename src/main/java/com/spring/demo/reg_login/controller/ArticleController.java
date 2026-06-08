@@ -36,12 +36,12 @@ public class ArticleController {
     public Result<String> add(@RequestBody ArticleRequest request,
                               HttpServletRequest servletRequest) {
 
-        String username =
-                (String) servletRequest.getAttribute("username");
+        String username = (String) servletRequest.getAttribute("username");
 
         articleService.add(
                 request.getTitle(),
                 request.getContent(),
+                request.getCoverImg(),
                 username
         );
 
@@ -68,6 +68,7 @@ public class ArticleController {
                 request.getId(),
                 request.getTitle(),
                 request.getContent(),
+                request.getCoverImg(),
                 username
         );
 

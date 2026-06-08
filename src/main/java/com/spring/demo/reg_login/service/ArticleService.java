@@ -9,6 +9,7 @@ import com.github.pagehelper.PageHelper;
 import com.spring.demo.reg_login.common.PageResult;
 import com.spring.demo.reg_login.entity.Article;
 import com.spring.demo.reg_login.mapper.ArticleMapper;
+import com.spring.demo.reg_login.utils.FileUtil;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,12 +26,13 @@ public class ArticleService {
     }
 
     // 新增
-    public void add(String title, String content, String author) {
+    public void add(String title, String content, String coverImg, String author) {
 
         Article article = new Article();
 
         article.setTitle(title);
         article.setContent(content);
+        article.setCoverImg(coverImg);
         article.setAuthor(author);
 
         articleMapper.insert(article);
@@ -45,7 +47,7 @@ public class ArticleService {
     }
 
     // 修改
-    public void update(Long id, String title, String content, String username) {
+    public void update(Long id, String title, String content, String coverImg, String username) {
 
         Article article = articleMapper.findById(id);
 
@@ -57,8 +59,15 @@ public class ArticleService {
             throw new RuntimeException("只能修改自己的博客！");
         }
 
+            // 如果换了封面，删除旧图片
+        if (article.getCoverImg() != null && !article.getCoverImg().equals(coverImg)
+        ) {
+            FileUtil.delete(article.getCoverImg());
+        }
+
         article.setTitle(title);
         article.setContent(content);
+        article.setCoverImg(coverImg);
 
         articleMapper.update(article);
     }
@@ -77,6 +86,10 @@ public class ArticleService {
         }
 
         articleMapper.deleteById(id);
+
+        FileUtil.delete(
+            article.getCoverImg()
+        );
 
     }
 
