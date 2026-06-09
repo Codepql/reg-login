@@ -9,4 +9,6 @@ public class ArticleRequest {
     private String content;
 
     private String coverImg;
+
+    private Long categoryId;
 }

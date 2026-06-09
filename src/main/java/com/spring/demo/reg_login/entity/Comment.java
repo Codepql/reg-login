@@ -5,19 +5,14 @@ import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
-public class Article {
+public class Comment {
     private Long id;
 
-    private String title;
+    private Long articleId;
 
     private String content;
 
-    private String author;
-
-    private String coverImg;
-
-    // 分类ID
-    private Long categoryId;
+    private String createUser;
 
     private LocalDateTime createTime;
 }

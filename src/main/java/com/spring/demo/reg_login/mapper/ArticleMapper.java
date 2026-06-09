@@ -38,6 +38,10 @@ public interface ArticleMapper {
                 and author like concat('%',#{author},'%')
             </if>
 
+            <if test="categoryId != null">
+                and category_id = #{categoryId}
+            </if>
+
         </where>
 
         order by id desc
@@ -49,7 +53,10 @@ public interface ArticleMapper {
             String title,
 
             @org.apache.ibatis.annotations.Param("author")
-            String author
+            String author,
+
+            @org.apache.ibatis.annotations.Param("categoryId")
+            Long categoryId
     );
 
     // 增
@@ -58,13 +65,15 @@ public interface ArticleMapper {
             title,
             content,
             author,
-            cover_img
+            cover_img,
+            category_id
         )
         values(
             #{title},
             #{content},
             #{author},
-            #{coverImg}
+            #{coverImg},
+            #{categoryId}
         )
     """)
     int insert(Article article);
@@ -83,7 +92,8 @@ public interface ArticleMapper {
         set
             title = #{title},
             content = #{content},
-            cover_img = #{coverImg}
+            cover_img = #{coverImg},
+            category_id = #{categoryId}
         where id = #{id}
     """)
     int update(Article article);
@@ -94,5 +104,24 @@ public interface ArticleMapper {
         where id = #{id}
     """)
     int deleteById(Long id);
+
+
+    // 查询我的文章
+    @Select("""
+        select *
+        from article
+        where author = #{author}
+        order by id desc
+    """)
+    List<Article> myList(String author);
+
+    // 分页查询
+    @Select("""
+        select *
+        from article
+        where author = #{author}
+        order by id desc
+    """)
+    List<Article> myPage(String author);
 
 }

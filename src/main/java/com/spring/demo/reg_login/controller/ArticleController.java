@@ -15,8 +15,8 @@ import com.spring.demo.reg_login.dto.article.ArticleRequest;
 import com.spring.demo.reg_login.dto.article.ArticleUpdateRequest;
 import com.spring.demo.reg_login.entity.Article;
 import com.spring.demo.reg_login.service.ArticleService;
+import com.spring.demo.reg_login.utils.ThreadLocalUtil;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -33,16 +33,13 @@ public class ArticleController {
 
     // POST /article/add → 新增文章
     @PostMapping("/article/add")
-    public Result<String> add(@RequestBody ArticleRequest request,
-                              HttpServletRequest servletRequest) {
-
-        String username = (String) servletRequest.getAttribute("username");
+    public Result<String> add(@RequestBody ArticleRequest request) {
 
         articleService.add(
                 request.getTitle(),
                 request.getContent(),
                 request.getCoverImg(),
-                username
+                request.getCategoryId()
         );
 
         return Result.success(
@@ -59,17 +56,15 @@ public class ArticleController {
 
     // POST /article/update → 修改文章（仅作者本人）
     @PostMapping("/article/update")
-    public Result<String> update(@RequestBody ArticleUpdateRequest request,
-                                 HttpServletRequest servletRequest) {
-
-        String username = (String) servletRequest.getAttribute("username");
+    public Result<String> update(@RequestBody ArticleUpdateRequest request) {
 
         articleService.update(
                 request.getId(),
                 request.getTitle(),
                 request.getContent(),
                 request.getCoverImg(),
-                username
+                request.getCategoryId(),
+                ThreadLocalUtil.get()
         );
 
         return Result.success(
@@ -80,11 +75,9 @@ public class ArticleController {
 
     // 删除
     @PostMapping("/article/delete")
-    public Result<String> delete(@RequestBody ArticleDeleteRequest request, HttpServletRequest servletRequest){
+    public Result<String> delete(@RequestBody ArticleDeleteRequest request) {
 
-        String username =(String) servletRequest.getAttribute("username");
-
-        articleService.delete(request.getId(), username);
+        articleService.delete(request.getId(), ThreadLocalUtil.get());
 
         return Result.success("删除成功");
 
@@ -96,13 +89,38 @@ public class ArticleController {
         Integer pageNum,
         Integer pageSize, 
         String title,
-        String author
+        String author,
+        Long categoryId
     ){
 
         return Result.success(
-            articleService.page(pageNum, pageSize, title, author)
+            articleService.page(pageNum, pageSize, title, author, categoryId)
         );
 
     }
 
+    // 查询我的文章
+    @GetMapping("/article/my")
+    public Result<List<Article>> myList() {
+
+        return Result.success(
+
+            articleService.myList()
+
+        );
+
+    }
+
+    // 分页查询我的文章
+    @GetMapping("/article/my/page")
+    public Result<PageResult<Article>> myPage(
+        Integer pageNum,
+        Integer pageSize
+    ) {
+
+        return Result.success(
+            articleService.myPage(pageNum, pageSize)
+        );
+
+    }
 }

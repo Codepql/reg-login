@@ -10,6 +10,7 @@ import com.spring.demo.reg_login.common.PageResult;
 import com.spring.demo.reg_login.entity.Article;
 import com.spring.demo.reg_login.mapper.ArticleMapper;
 import com.spring.demo.reg_login.utils.FileUtil;
+import com.spring.demo.reg_login.utils.ThreadLocalUtil;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,14 +27,15 @@ public class ArticleService {
     }
 
     // 新增
-    public void add(String title, String content, String coverImg, String author) {
+    public void add(String title, String content, String coverImg, Long categoryId ) {
 
         Article article = new Article();
 
         article.setTitle(title);
         article.setContent(content);
         article.setCoverImg(coverImg);
-        article.setAuthor(author);
+        article.setCategoryId(categoryId);
+        article.setAuthor(ThreadLocalUtil.get()); // 获取当前登录用户
 
         articleMapper.insert(article);
 
@@ -47,7 +49,7 @@ public class ArticleService {
     }
 
     // 修改
-    public void update(Long id, String title, String content, String coverImg, String username) {
+    public void update(Long id, String title, String content, String coverImg, Long categoryId, String username) {
 
         Article article = articleMapper.findById(id);
 
@@ -68,6 +70,7 @@ public class ArticleService {
         article.setTitle(title);
         article.setContent(content);
         article.setCoverImg(coverImg);
+        article.setCategoryId(categoryId);
 
         articleMapper.update(article);
     }
@@ -99,12 +102,13 @@ public class ArticleService {
         Integer pageNum,
         Integer pageSize, 
         String title, 
-        String author
+        String author,
+        Long categoryId
     ){
 
         PageHelper.startPage(pageNum, pageSize);
 
-        Page<Article> page = (Page<Article>)articleMapper.page(title,author);
+        Page<Article> page = (Page<Article>)articleMapper.page(title,author,categoryId);
 
         PageResult<Article> result = new PageResult<>();
 
@@ -113,6 +117,40 @@ public class ArticleService {
         result.setList(page.getResult());
 
         return result;
+
+    }
+
+    // 查询我的文章
+    public List<Article> myList() {
+
+        String username = ThreadLocalUtil.get();
+
+        return articleMapper.myList(
+            username
+        );
+
+    }
+
+    // 分页查询我的文章
+    // 我的博客分页
+    public PageResult<Article> myPage(
+
+        Integer pageNum,
+
+        Integer pageSize
+
+    ) {
+
+        String username = ThreadLocalUtil.get();
+
+        PageHelper.startPage(
+                pageNum,
+                pageSize
+        );
+
+        Page<Article> page = (Page<Article>)articleMapper.myPage(username);
+
+        return new PageResult<>(page.getTotal(), page.getResult());
 
     }
 
