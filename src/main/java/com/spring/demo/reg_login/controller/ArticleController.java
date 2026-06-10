@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.spring.demo.reg_login.annotation.LogOperation;
 import com.spring.demo.reg_login.common.PageResult;
 import com.spring.demo.reg_login.common.Result;
 import com.spring.demo.reg_login.dto.article.ArticleDeleteRequest;
@@ -32,6 +33,7 @@ public class ArticleController {
 
     // POST /article/add → 新增文章
     @PostMapping("/article/add")
+    @LogOperation("新增文章")
     public Result<String> add(@RequestBody ArticleRequest request) {
         articleService.add(
                 request.getTitle(),
@@ -50,6 +52,7 @@ public class ArticleController {
 
     // POST /article/update → 修改文章（仅作者本人）
     @PostMapping("/article/update")
+    @LogOperation("修改文章")
     public Result<String> update(@RequestBody ArticleUpdateRequest request) {
         articleService.update(
                 request.getId(),
@@ -64,6 +67,7 @@ public class ArticleController {
 
     // 删除
     @PostMapping("/article/delete")
+    @LogOperation("删除文章")
     public Result<String> delete(@RequestBody ArticleDeleteRequest request) {
         articleService.delete(request.getId());
         return Result.success("删除成功");

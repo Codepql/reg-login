@@ -1,6 +1,8 @@
 package com.spring.demo.reg_login.service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -44,18 +46,26 @@ public class ArticleService {
 
     // 查详情
     public Article detail(Long id) {
+
         String key = "article:detail:" + id;
         String json = redisTemplate.opsForValue().get(key);
+
         if (json != null) {
-            articleMapper.addViewCount(id);
+            redisTemplate.opsForValue().increment(
+                "article:view:" + id
+            );
             return JSON.parseObject(json, Article.class);
         }
+
         Article article = articleMapper.findById(id);
+
         if (article == null) {
             throw new RuntimeException("文章不存在");
         }
+
         redisTemplate.opsForValue().set(key, JSON.toJSONString(article));
-        articleMapper.addViewCount(id);
+
+        redisTemplate.opsForValue().increment("article:view:" + id);
         return article;
     }
 
@@ -130,7 +140,23 @@ public class ArticleService {
 
     // 热门文章
     public List<Article> hotList() {
-        return articleMapper.hotList();
+        Set<String> ids = redisTemplate.opsForZSet()
+            .reverseRange("article:hot", 0, 9);
+
+        if (ids == null || ids.isEmpty()) {
+            return articleMapper.findAll(); // fallback
+        }
+
+        List<Article> list = new ArrayList<>();
+
+        for (String id : ids) {
+            Article article = articleMapper.findById(Long.valueOf(id));
+            if (article != null) {
+                list.add(article);
+            }
+        }
+
+        return list;
     }
 
 }

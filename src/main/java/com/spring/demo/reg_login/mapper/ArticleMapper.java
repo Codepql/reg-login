@@ -133,15 +133,6 @@ public interface ArticleMapper {
     """)
     void subLikeCount(Long id);
 
-    // 热门博客
-    @Select("""
-        select *
-        from article
-        order by like_count desc
-        limit 10
-    """)
-    List<Article> hotList();
-
     // 统计文章数
     @Select("""
         select count(*)
@@ -170,5 +161,16 @@ public interface ArticleMapper {
         from article
     """)
     Long totalViewCount();
+
+    // 批量增加浏览量
+    @Update("""
+        update article
+        set view_count = view_count + #{count}
+        where id = #{id}
+    """)
+    void addViewCountBatch(
+        @Param("id") Long id,
+        @Param("count") Long count
+    );
 
 }
