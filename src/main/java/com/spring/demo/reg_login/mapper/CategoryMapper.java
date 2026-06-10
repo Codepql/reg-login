@@ -14,7 +14,7 @@ import com.spring.demo.reg_login.entity.Category;
 public interface CategoryMapper {
 
     // 查list
-     @Select("""
+    @Select("""
         select *
         from category
         order by id desc
@@ -56,4 +56,5 @@ public interface CategoryMapper {
         where id = #{id}
     """)
     int delete(Long id);
+
 }

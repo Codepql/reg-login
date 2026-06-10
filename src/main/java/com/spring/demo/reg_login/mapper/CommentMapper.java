@@ -11,25 +11,18 @@ import com.spring.demo.reg_login.entity.Comment;
 
 @Mapper
 public interface CommentMapper {
+
     // 发表评论
     @Insert("""
         insert into comment(
-
             article_id,
-
             content,
-
             create_user
-
         )
         values(
-
             #{articleId},
-
             #{content},
-
             #{createUser}
-
         )
     """)
     int insert(Comment comment);
@@ -57,4 +50,12 @@ public interface CommentMapper {
         where id = #{id}
     """)
     int deleteById(Long id);
+
+    // 统计文章的评论数
+    @Select("""
+        select count(*)
+        from comment
+    """)
+    Long count();
+
 }

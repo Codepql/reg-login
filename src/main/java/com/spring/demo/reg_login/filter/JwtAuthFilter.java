@@ -2,6 +2,11 @@ package com.spring.demo.reg_login.filter;
 
 import java.io.IOException;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -9,18 +14,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.spring.demo.reg_login.utils.JwtUtils;
 import com.spring.demo.reg_login.utils.ThreadLocalUtil;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;  
-
-
-
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
-
 
     private final StringRedisTemplate redisTemplate;
 
@@ -32,16 +28,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     };
 
     // 判断是否在白名单中
-    private boolean isWhiteList(String path){
-
-        for(String item : WHITE_LIST){
-
-            if(path.startsWith(item)){
+    private boolean isWhiteList(String path) {
+        for (String item : WHITE_LIST) {
+            if (path.startsWith(item)) {
                 return true;
             }
-
         }
-
         return false;
     }
 

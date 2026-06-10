@@ -26,7 +26,7 @@
 | ✅ MyBatis | 🟢 | 注解式 SQL，零 XML 配置 |
 | ✅ MySQL | 🟢 | 关系型数据库，utf8mb4 编码 |
 | ✅ Lombok | 🟢 | 消除样板代码（`@Data`、`@RequiredArgsConstructor`） |
-| ✅ Redis | 🟢 | 缓存 Token，实现登出即失效 |
+| ✅ Redis | 🟢 | 缓存 Token 与点赞数据 |
 | ✅ PageHelper | 🟢 | 物理分页，自动拼接 `LIMIT` |
 
 ### 👤 用户模块
@@ -42,6 +42,10 @@
 | ✅ 登录 | 🟢 | 密码匹配 → JWT 签发 → Redis 存储 |
 | ✅ 登出 | 🟢 | 删除 Redis 中 Token，立即失效 |
 | ✅ 获取当前用户 | 🟢 | ThreadLocal + `/me` + `/currentUser` |
+| ✅ 用户列表 | 🟢 | 管理员可查看所有用户（VO，不暴露密码） |
+| ✅ 角色管理 | 🟢 | 管理员可修改用户角色（admin/user） |
+| ✅ 状态管理 | 🟢 | 管理员可封禁/解封用户 |
+| ✅ 分页查询用户 | 🟢 | 支持按用户名模糊搜索 |
 
 ### 🔐 登录认证体系
 ```
@@ -78,21 +82,56 @@
 ### 📝 博客模块
 ```
 ✍️  发布 ──→ 📤 上传封面图 ──→ 💾 存入 MySQL
-📖 详情 ──→ 🔍 按 ID 查询 ──→ 📄 返回完整信息
-✏️  修改 ──→ 🔒 作者校验 ──→ 🖼️ 旧图清理 ──→ 💾 更新
-🗑️ 删除 ──→ 🔒 作者校验 ──→ 🖼️ 封面图清理 ──→ ❌ 删除记录
+📖 详情 ──→ 🔍 按 ID 查询 ──→ 🟥 Redis 缓存 ──→ 📄 返回完整信息
+✏️  修改 ──→ 🔒 作者校验 ──→ 🖼️ 旧图清理 ──→ 🗑️ 缓存清除 ──→ 💾 更新
+🗑️ 删除 ──→ 🔒 作者/管理员校验 ──→ 🖼️ 封面图清理 ──→ 🗑️ 缓存清除 ──→ ❌ 删除记录
 ```
 
 | 功能 | 状态 | 说明 |
 |------|:----:|------|
-| ✅ 发布文章 | 🟢 | 标题 + 内容 + 封面图 URL |
+| ✅ 发布文章 | 🟢 | 标题 + 内容 + 封面图 URL + 分类 |
 | ✅ 文章列表 | 🟢 | 按 ID 倒序 |
-| ✅ 文章详情 | 🟢 | 按 ID 查询 |
+| ✅ 文章详情 | 🟢 | Redis 缓存 + 浏览量自动增加 |
 | ✅ 修改文章 | 🟢 | 仅作者本人可修改 |
-| ✅ 删除文章 | 🟢 | 仅作者本人可删除 |
-| ✅ 分页查询 | 🟢 | PageHelper 物理分页 |
-| ✅ 标题模糊搜索 | 🟢 | `LIKE %keyword%` |
-| ✅ 作者查询 | 🟢 | 按作者筛选 |
+| ✅ 删除文章 | 🟢 | 作者本人或管理员可删除 |
+| ✅ 分页查询 | 🟢 | PageHelper 物理分页，支持标题/作者/分类筛选 |
+| ✅ 我的文章 | 🟢 | 查询当前用户的文章（列表 + 分页） |
+| ✅ 热门文章 | 🟢 | 按点赞数倒序 TOP 10 |
+
+### 📂 分类模块
+| 功能 | 状态 | 说明 |
+|------|:----:|------|
+| ✅ 分类列表 | 🟢 | 查询所有分类 |
+| ✅ 新增分类 | 🟢 | 记录创建人 |
+| ✅ 修改分类 | 🟢 | 按 ID 更新分类名 |
+| ✅ 删除分类 | 🟢 | 按 ID 删除 |
+
+### 💬 评论模块
+| 功能 | 状态 | 说明 |
+|------|:----:|------|
+| ✅ 发表评论 | 🟢 | 文章 ID + 内容，记录评论人 |
+| ✅ 评论列表 | 🟢 | 按文章 ID 查询，ID 倒序 |
+| ✅ 删除评论 | 🟢 | 评论人本人或管理员可删除 |
+
+### ❤️ 点赞模块（Redis Set）
+```
+👍 点赞 ──→ 🟥 SADD article:{id}:like {username} ──→ 📊 like_count +1
+👎 取消  ──→ 🟥 SREM article:{id}:like {username} ──→ 📊 like_count -1
+🔢 数量  ──→ 🟥 SCARD article:{id}:like
+❓ 状态  ──→ 🟥 SISMEMBER article:{id}:like {username}
+```
+
+| 功能 | 状态 | 说明 |
+|------|:----:|------|
+| ✅ 点赞 | 🟢 | Redis Set 存储，防重复点赞 |
+| ✅ 取消点赞 | 🟢 | 从 Set 中移除 |
+| ✅ 点赞数量 | 🟢 | SCARD 直接获取 |
+| ✅ 点赞状态 | 🟢 | SISMEMBER 判断是否已点赞 |
+
+### 📊 仪表盘模块
+| 功能 | 状态 | 说明 |
+|------|:----:|------|
+| ✅ 统计数据 | 🟢 | 用户数、文章数、评论数、点赞总数、浏览总数 |
 
 ### 📁 文件模块
 ```
@@ -130,6 +169,7 @@
 | 🔐 认证 | JJWT (io.jsonwebtoken) | 0.12.7 | 🎫 |
 | 🔒 加密 | Spring Security Crypto (BCrypt) | — | 🔒 |
 | 📄 分页 | PageHelper | 2.1.1 | 📖 |
+| 📦 JSON | Fastjson2 | 2.0.57 | 📦 |
 | 🧹 简化 | Lombok | — | 🧹 |
 | 🔥 热重载 | DevTools | — | 🔥 |
 | 🧪 测试 | JUnit 5 + Mockito | — | 🧪 |
@@ -140,67 +180,88 @@
 
 ```
 reg-login/
-├── 📄 pom.xml                          # Maven 依赖配置
-├── 📄 READER.md                        # 本文件 📖
+├── 📄 pom.xml                              # Maven 依赖配置
+├── 📄 README.md                            # 本文件 📖
 │
 ├── 📂 src/main/java/com/spring/demo/reg_login/
-│   ├── 🚀 RegLoginApplication.java     # Spring Boot 启动类
+│   ├── 🚀 RegLoginApplication.java         # Spring Boot 启动类
 │   │
 │   ├── 📂 config/
-│   │   └── ⚙️ WebConfig.java            # CORS + 拦截器 + 静态资源
+│   │   └── ⚙️ WebConfig.java               # CORS + 静态资源映射
 │   │
 │   ├── 📂 common/
-│   │   ├── 📦 Result.java              # 统一响应体 {code, message, data}
-│   │   └── 📦 PageResult.java          # 分页响应体 {total, list}
+│   │   ├── 📦 Result.java                  # 统一响应体 {code, message, data}
+│   │   └── 📦 PageResult.java              # 分页响应体 {total, list}
 │   │
 │   ├── 📂 controller/
-│   │   ├── 👋 HelloController.java     # 测试接口 (/hello, /parse, /info)
-│   │   ├── 👤 UserController.java      # 用户接口 (/register, /login, /logout, /me)
-│   │   ├── 📝 ArticleController.java   # 文章接口 (/article/*)
-│   │   ├── 📤 UploadController.java    # 文件上传 (/upload)
-│   │   └── 🟥 RedisController.java     # 当前用户测试 (/currentUser)
+│   │   ├── 👋 HelloController.java         # 测试接口
+│   │   ├── 👤 UserController.java          # 用户接口（注册/登录/登出/用户管理）
+│   │   ├── 📝 ArticleController.java       # 文章接口（CRUD + 分页 + 热门）
+│   │   ├── 📂 CategoryController.java      # 分类接口（CRUD）
+│   │   ├── 💬 CommentController.java       # 评论接口（发表/查询/删除）
+│   │   ├── ❤️ LikeController.java          # 点赞接口（点赞/取消/数量/状态）
+│   │   ├── 📤 UploadController.java        # 文件上传
+│   │   ├── 🟥 RedisController.java         # 当前用户测试
+│   │   └── 📊 DashboardController.java     # 仪表盘统计
 │   │
 │   ├── 📂 service/
-│   │   ├── 👤 UserService.java         # 注册/登录逻辑
-│   │   └── 📝 ArticleService.java      # 文章 CRUD + 权限校验
+│   │   ├── 👤 UserService.java             # 注册/登录/用户管理
+│   │   ├── 📝 ArticleService.java          # 文章 CRUD + 缓存 + 权限
+│   │   ├── 📂 CategoryService.java         # 分类 CRUD
+│   │   ├── 💬 CommentService.java          # 评论 发表/查询/删除
+│   │   ├── ❤️ LikeService.java             # 点赞逻辑（Redis Set）
+│   │   └── 📊 DashboardService.java        # 仪表盘统计
 │   │
 │   ├── 📂 mapper/
-│   │   ├── 👤 UserMapper.java          # 用户 SQL（注解式）
-│   │   └── 📝 ArticleMapper.java       # 文章 SQL（注解式 + 动态SQL）
+│   │   ├── 👤 UserMapper.java              # 用户 SQL（注解式）
+│   │   ├── 📝 ArticleMapper.java           # 文章 SQL（注解式 + 动态SQL）
+│   │   ├── 📂 CategoryMapper.java          # 分类 SQL
+│   │   └── 💬 CommentMapper.java           # 评论 SQL
 │   │
 │   ├── 📂 entity/
-│   │   ├── 👤 User.java                # 用户实体
-│   │   └── 📝 Article.java             # 文章实体
+│   │   ├── 👤 User.java                    # 用户实体
+│   │   ├── 📝 Article.java                 # 文章实体
+│   │   ├── 📂 Category.java                # 分类实体
+│   │   └── 💬 Comment.java                 # 评论实体
 │   │
 │   ├── 📂 dto/
-│   │   ├── 📥 LoginRequest.java        # 登录请求 DTO
-│   │   ├── 📥 RegisterRequest.java     # 注册请求 DTO
-│   │   └── 📂 article/
-│   │       ├── 📥 ArticleRequest.java       # 新增文章 DTO
-│   │       ├── 📥 ArticleUpdateRequest.java # 修改文章 DTO
-│   │       └── 📥 ArticleDeleteRequest.java # 删除文章 DTO
+│   │   ├── 📥 LoginRequest.java            # 登录请求 DTO
+│   │   ├── 📥 RegisterRequest.java         # 注册请求 DTO
+│   │   ├── 📂 article/
+│   │   │   ├── 📥 ArticleRequest.java          # 新增文章 DTO
+│   │   │   ├── 📥 ArticleUpdateRequest.java    # 修改文章 DTO
+│   │   │   └── 📥 ArticleDeleteRequest.java    # 删除文章 DTO
+│   │   ├── 📂 category/
+│   │   │   ├── 📥 CategoryRequest.java         # 新增分类 DTO
+│   │   │   └── 📥 CategoryUpdateRequest.java   # 修改分类 DTO
+│   │   ├── 📂 comment/
+│   │   │   └── 📥 CommentAddRequest.java       # 新增评论 DTO
+│   │   └── 📂 user/
+│   │       ├── 📥 UserRoleDTO.java             # 更新角色 DTO
+│   │       └── 📥 UserStatusDTO.java           # 更新状态 DTO
+│   │
+│   ├── 📂 vo/
+│   │   ├── 👤 UserVO.java                  # 用户视图对象（不暴露密码）
+│   │   └── 📊 DashboardVO.java             # 仪表盘视图对象
 │   │
 │   ├── 📂 filter/
-│   │   └── 🛡️ JwtAuthFilter.java       # JWT 认证过滤器（核心🔐）
-│   │
-│   ├── 📂 interceptor/
-│   │   └── 🛡️ JwtInterceptor.java      # JWT 拦截器（备用）
+│   │   └── 🛡️ JwtAuthFilter.java           # JWT 认证过滤器（核心🔐）
 │   │
 │   ├── 📂 utils/
-│   │   ├── 🎫 JwtUtils.java            # JWT 生成 & 解析
-│   │   ├── 📁 FileUtil.java            # 文件删除工具
-│   │   └── 🧵 ThreadLocalUtil.java     # 线程级用户存储
+│   │   ├── 🎫 JwtUtils.java                # JWT 生成 & 解析
+│   │   ├── 📁 FileUtil.java                # 文件删除工具
+│   │   └── 🧵 ThreadLocalUtil.java         # 线程级用户存储
 │   │
 │   └── 📂 exception/
 │       └── 🚨 GlobalExceptionHandler.java  # 全局异常处理
 │
 ├── 📂 src/main/resources/
-│   ├── ⚙️ application.properties       # 应用配置
+│   ├── ⚙️ application.properties           # 应用配置
 │   └── 📂 sql/
-│       └── 🗄️ init.sql                 # 数据库初始化脚本
+│       └── 🗄️ init.sql                     # 数据库初始化脚本
 │
 └── 📂 src/test/java/.../
-    └── 🧪 RegLoginApplicationTests.java # 测试类
+    └── 🧪 RegLoginApplicationTests.java    # 测试类
 ```
 
 ---
@@ -213,7 +274,17 @@ reg-login/
 | 🔑 `id` | `BIGINT` | PK, AUTO_INCREMENT | 主键 |
 | 👤 `username` | `VARCHAR(50)` | NOT NULL, UNIQUE | 用户名 |
 | 🔒 `password` | `VARCHAR(100)` | NOT NULL | BCrypt 密文 |
-| 🕐 `createTime` | `DATETIME` | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+| 🎭 `role` | `VARCHAR(20)` | NOT NULL, DEFAULT 'user' | 角色（user / admin） |
+| 🔘 `status` | `INT` | NOT NULL, DEFAULT 1 | 状态（1: 正常, 0: 封禁） |
+| 🕐 `create_time` | `DATETIME` | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+
+### 📊 category 表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| 🔑 `id` | `BIGINT` | PK, AUTO_INCREMENT | 主键 |
+| 📂 `category_name` | `VARCHAR(50)` | NOT NULL, UNIQUE | 分类名称 |
+| 👤 `create_user` | `VARCHAR(50)` | NOT NULL | 创建人 |
+| 🕐 `create_time` | `DATETIME` | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
 
 ### 📊 article 表
 | 字段 | 类型 | 约束 | 说明 |
@@ -223,12 +294,26 @@ reg-login/
 | 📝 `content` | `TEXT` | NOT NULL | 文章内容 |
 | 👤 `author` | `VARCHAR(50)` | NOT NULL | 作者（用户名） |
 | 🖼️ `cover_img` | `VARCHAR(500)` | — | 封面图片 URL |
-| 🕐 `createTime` | `DATETIME` | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+| 📂 `category_id` | `BIGINT` | — | 分类 ID |
+| ❤️ `like_count` | `BIGINT` | NOT NULL, DEFAULT 0 | 点赞数 |
+| 👁️ `view_count` | `BIGINT` | NOT NULL, DEFAULT 0 | 浏览量 |
+| 🕐 `create_time` | `DATETIME` | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+
+### 📊 comment 表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| 🔑 `id` | `BIGINT` | PK, AUTO_INCREMENT | 主键 |
+| 📝 `article_id` | `BIGINT` | NOT NULL | 文章 ID |
+| 💬 `content` | `TEXT` | NOT NULL | 评论内容 |
+| 👤 `create_user` | `VARCHAR(50)` | NOT NULL | 评论人 |
+| 🕐 `create_time` | `DATETIME` | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
 
 ### 🟥 Redis Key 设计
-| Key | Value | TTL | 说明 |
-|------|------|-----|------|
-| `login:{username}` | JWT Token | 7 天 | 登录状态存储，登出时删除 |
+| Key | 类型 | Value | TTL | 说明 |
+|------|------|------|-----|------|
+| `login:{username}` | String | JWT Token | 7 天 | 登录状态，登出时删除 |
+| `article:detail:{id}` | String | Article JSON | 永久 | 文章详情缓存 |
+| `article:{id}:like` | Set | 用户名集合 | 永久 | 点赞用户集合 |
 
 ---
 
@@ -243,19 +328,21 @@ reg-login/
 | 方法 | 路径 | 说明 | 请求体 |
 |:----:|------|------|--------|
 | 🔵 GET | `/hello` | 🧪 测试 | — |
-| 🔵 GET | `/parse?token=xxx` | 🔍 JWT 解析测试 | — |
 | 🟢 POST | `/register` | 📝 用户注册 | `{username, password}` |
 | 🟢 POST | `/login` | 🔑 用户登录 | `{username, password}` |
 | 🟢 POST | `/upload` | 📤 图片上传 | `multipart/form-data (file)` |
 
-### 🔴 需登录接口
+### 👤 用户接口（需登录）
 
 | 方法 | 路径 | 说明 | 请求体/参数 |
 |:----:|------|------|-------------|
 | 🔵 GET | `/info` | 🔐 登录用户可访问 | — |
-| 🔵 GET | `/me` | 👤 获取当前用户名 | — |
-| 🔵 GET | `/currentUser` | 👤 ThreadLocal 获取用户 | — |
+| 🔵 GET | `/currentUser` | 👤 获取当前登录用户 | — |
 | 🟠 POST | `/logout` | 🚪 退出登录 | — |
+| 🔵 GET | `/user/list` | 📋 用户列表（管理员） | — |
+| 🟠 PUT | `/user/role` | 🎭 修改角色（管理员） | `{id, role}` |
+| 🟠 PUT | `/user/status` | 🔘 修改状态（管理员） | `{id, status}` |
+| 🔵 GET | `/user/page` | 📄 分页查询用户（管理员） | `?pageNum=&pageSize=&username=` |
 
 ### 📝 文章接口（需登录）
 
@@ -263,10 +350,45 @@ reg-login/
 |:----:|------|------|-------------|
 | 🔵 GET | `/article/list` | 📋 文章列表 | — |
 | 🔵 GET | `/article/detail` | 📖 文章详情 | `?id=1` |
-| 🟢 POST | `/article/add` | ✍️ 发布文章 | `{title, content, coverImg}` |
-| 🟠 POST | `/article/update` | ✏️ 修改文章 | `{id, title, content, coverImg}` |
+| 🟢 POST | `/article/add` | ✍️ 发布文章 | `{title, content, coverImg, categoryId}` |
+| 🟠 POST | `/article/update` | ✏️ 修改文章 | `{id, title, content, coverImg, categoryId}` |
 | 🔴 POST | `/article/delete` | 🗑️ 删除文章 | `{id}` |
-| 🔵 GET | `/article/page` | 📄 分页搜索 | `?pageNum=1&pageSize=10&title=&author=` |
+| 🔵 GET | `/article/page` | 📄 分页搜索 | `?pageNum=&pageSize=&title=&author=&categoryId=` |
+| 🔵 GET | `/article/my` | 👤 我的文章 | — |
+| 🔵 GET | `/article/my/page` | 📄 我的文章分页 | `?pageNum=&pageSize=` |
+| 🔵 GET | `/article/hot` | 🔥 热门文章 TOP10 | — |
+
+### 📂 分类接口（需登录）
+
+| 方法 | 路径 | 说明 | 请求体/参数 |
+|:----:|------|------|-------------|
+| 🔵 GET | `/category/list` | 📋 分类列表 | — |
+| 🟢 POST | `/category/add` | ➕ 新增分类 | `{categoryName}` |
+| 🟠 POST | `/category/update` | ✏️ 修改分类 | `{id, categoryName}` |
+| 🔴 POST | `/category/delete` | 🗑️ 删除分类 | `?id=1` |
+
+### 💬 评论接口（需登录）
+
+| 方法 | 路径 | 说明 | 请求体/参数 |
+|:----:|------|------|-------------|
+| 🟢 POST | `/comment/add` | 💬 发表评论 | `{articleId, content}` |
+| 🔵 GET | `/comment/list` | 📋 文章评论 | `?articleId=1` |
+| 🔴 DELETE | `/comment/delete` | 🗑️ 删除评论 | `?id=1` |
+
+### ❤️ 点赞接口（需登录）
+
+| 方法 | 路径 | 说明 | 参数 |
+|:----:|------|------|------|
+| 🟢 POST | `/like` | 👍 点赞 | `?articleId=1` |
+| 🔴 DELETE | `/like` | 👎 取消点赞 | `?articleId=1` |
+| 🔵 GET | `/like/count` | 🔢 点赞数量 | `?articleId=1` |
+| 🔵 GET | `/like/status` | ❓ 是否已点赞 | `?articleId=1` |
+
+### 📊 仪表盘接口（需登录）
+
+| 方法 | 路径 | 说明 | 参数 |
+|:----:|------|------|------|
+| 🔵 GET | `/dashboard` | 📊 系统统计 | — |
 
 ### 📦 统一响应格式
 
@@ -309,7 +431,6 @@ reg-login/
          ┌────────────────────────┐
          │  🎮 Controller          │  ← 业务入口
          │  从 ThreadLocal 取用户   │
-         │  或 request.getAttribute │
          └───────────┬────────────┘
                      ▼
          ┌────────────────────────┐
@@ -372,7 +493,7 @@ POST /logout
 |------|------|------|
 | ☕ JDK | 17+ | 编译运行 |
 | 🐬 MySQL | 8.0+ | 数据库 |
-| 🟥 Redis | 7.0+ | Token 缓存 |
+| 🟥 Redis | 7.0+ | Token 缓存 + 点赞数据 |
 | 🔧 Maven | 3.8+ | 构建工具 |
 
 ### 🚀 启动步骤
@@ -445,10 +566,24 @@ registry.addMapping("/**")
 - 🖼️ 博客封面图保存
 - 🗑️ 修改/删除时自动清理旧图片
 
+### ✅ 阶段六：分类、评论与点赞
+- 📂 文章分类管理（CRUD）
+- 💬 文章评论（发表/查询/删除）
+- ❤️ 点赞/取消点赞（Redis Set 存储）
+- 👁️ 浏览量统计
+- 🟥 文章详情 Redis 缓存
+
+### ✅ 阶段七：管理员与仪表盘
+- 👑 管理员角色（admin/user）
+- 🔘 用户状态管理（封禁/解封）
+- 📊 仪表盘数据统计
+- 📄 用户分页查询
+- 👤 用户视图对象（VO，不暴露密码）
+
 ---
 
 <p align="center">
-  🎯 <b>项目完成度：~90%</b> &nbsp;|&nbsp;
+  🎯 <b>项目完成度：~95%</b> &nbsp;|&nbsp;
   🐙 <b>适合校招简历</b> &nbsp;|&nbsp;
   🚀 <b>持续迭代中...</b>
 </p>

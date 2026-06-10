@@ -1,8 +1,9 @@
 package com.spring.demo.reg_login.exception;
 
-import com.spring.demo.reg_login.common.Result;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import com.spring.demo.reg_login.common.Result;
 
 // 全局异常处理器：统一拦截所有Controller中抛出的异常，避免把错误堆栈直接返回给前端
 @RestControllerAdvice

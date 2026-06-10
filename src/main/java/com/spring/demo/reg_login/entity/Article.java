@@ -19,5 +19,9 @@ public class Article {
     // 分类ID
     private Long categoryId;
 
+    private Long likeCount;
+
+    private Long viewCount;
+
     private LocalDateTime createTime;
 }

@@ -15,25 +15,19 @@ public class Result<T> {
 
     // 成功响应（状态码200）
     public static <T> Result<T> success(T data) {
-
         Result<T> result = new Result<>();
-
         result.setCode(200);
         result.setMessage("success");
         result.setData(data);
-
         return result;
     }
 
     // 失败响应（状态码500，data为null）
     public static <T> Result<T> error(String message) {
-
         Result<T> result = new Result<>();
-
         result.setCode(500);
         result.setMessage(message);
         result.setData(null);
-
         return result;
     }
 

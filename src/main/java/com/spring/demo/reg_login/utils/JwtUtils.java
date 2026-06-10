@@ -22,7 +22,6 @@ public class JwtUtils {
 
     // 生成Token
     public static String generateToken(String username) {
-
         return Jwts.builder()
                 .subject(username)                          // 主题=用户名
                 .issuedAt(new Date())                       // 签发时间
@@ -33,7 +32,6 @@ public class JwtUtils {
 
     // 解析Token，返回用户名
     public static String parseToken(String token) {
-
         return Jwts.parser()
                 .verifyWith(KEY)              // 用同一把密钥验证签名
                 .build()

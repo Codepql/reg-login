@@ -1,6 +1,7 @@
 package com.spring.demo.reg_login.utils;
 
 public class ThreadLocalUtil {
+
     private static final ThreadLocal<String> THREAD_LOCAL = new ThreadLocal<>();
 
     // 保存用户
@@ -17,4 +18,5 @@ public class ThreadLocalUtil {
     public static void remove() {
         THREAD_LOCAL.remove();
     }
+
 }

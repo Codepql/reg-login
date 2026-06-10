@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS `user` (
     `id`          BIGINT       NOT NULL AUTO_INCREMENT  COMMENT '主键',
     `username`    VARCHAR(50)  NOT NULL                 COMMENT '用户名',
     `password`    VARCHAR(100) NOT NULL                 COMMENT '密码（BCrypt密文）',
+    `role`        VARCHAR(20)  NOT NULL DEFAULT 'user'  COMMENT '角色（user: 普通用户, admin: 管理员）',
+    `status`      INT          NOT NULL DEFAULT 1       COMMENT '状态（1: 正常, 0: 封禁）',
     `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_username` (`username`)
@@ -38,6 +40,8 @@ CREATE TABLE IF NOT EXISTS `article` (
     `author`      VARCHAR(50)  NOT NULL                 COMMENT '作者（用户名）',
     `cover_img`   VARCHAR(500) DEFAULT NULL             COMMENT '封面图片URL',
     `category_id` BIGINT       DEFAULT NULL             COMMENT '分类ID',
+    `like_count`  BIGINT       NOT NULL DEFAULT 0       COMMENT '点赞数',
+    `view_count`  BIGINT       NOT NULL DEFAULT 0       COMMENT '浏览量',
     `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
     KEY `idx_author` (`author`),

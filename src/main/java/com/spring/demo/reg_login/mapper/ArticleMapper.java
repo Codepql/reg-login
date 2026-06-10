@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
@@ -48,16 +49,9 @@ public interface ArticleMapper {
 
         </script>
     """)
-    List<Article> page(
-            @org.apache.ibatis.annotations.Param("title")
-            String title,
-
-            @org.apache.ibatis.annotations.Param("author")
-            String author,
-
-            @org.apache.ibatis.annotations.Param("categoryId")
-            Long categoryId
-    );
+    List<Article> page(@Param("title") String title,
+                       @Param("author") String author,
+                       @Param("categoryId") Long categoryId);
 
     // 增
     @Insert("""
@@ -105,7 +99,6 @@ public interface ArticleMapper {
     """)
     int deleteById(Long id);
 
-
     // 查询我的文章
     @Select("""
         select *
@@ -123,5 +116,59 @@ public interface ArticleMapper {
         order by id desc
     """)
     List<Article> myPage(String author);
+
+    // 点赞数（加1）
+    @Update("""
+        update article
+        set like_count = like_count + 1
+        where id = #{id}
+    """)
+    void addLikeCount(Long id);
+
+    // 点赞数（减1）
+    @Update("""
+        update article
+        set like_count = like_count - 1
+        where id = #{id}
+    """)
+    void subLikeCount(Long id);
+
+    // 热门博客
+    @Select("""
+        select *
+        from article
+        order by like_count desc
+        limit 10
+    """)
+    List<Article> hotList();
+
+    // 统计文章数
+    @Select("""
+        select count(*)
+        from article
+    """)
+    Long count();
+
+    // 增加浏览量
+    @Update("""
+        update article
+        set view_count = view_count + 1
+        where id = #{id}
+    """)
+    void addViewCount(Long id);
+
+    // 点赞总数
+    @Select("""
+        select ifnull(sum(like_count),0)
+        from article
+    """)
+    Long totalLikeCount();
+
+    // 浏览量总数
+    @Select("""
+        select ifnull(sum(view_count),0)
+        from article
+    """)
+    Long totalViewCount();
 
 }
