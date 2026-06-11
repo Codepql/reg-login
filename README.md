@@ -128,6 +128,33 @@
 | ✅ 点赞数量 | 🟢 | SCARD 直接获取 |
 | ✅ 点赞状态 | 🟢 | SISMEMBER 判断是否已点赞 |
 
+### ⚡ 秒杀模块（Redis 分布式锁 + Lua 原子操作）
+```
+⚡ 秒杀请求
+    ↓
+🔒 获取分布式锁（Redis setIfAbsent + UUID）
+    ↓
+🧵 获取当前用户（ThreadLocal）
+    ↓
+📜 Lua 原子脚本执行：
+  ├── 🔍 SISMEMBER 检查是否已购买
+  ├── 📊 GET 检查库存是否充足
+  ├── 📉 DECR 扣减 Redis 库存
+  └── 👤 SADD 记录已购买用户
+    ↓
+💾 异步同步 MySQL（扣库存 + 插订单）
+    ↓
+🔓 Lua 脚本安全释放锁
+```
+
+| 功能 | 状态 | 说明 |
+|------|:----:|------|
+| ✅ 商品列表 | 🟢 | 查询所有秒杀商品 |
+| ✅ 秒杀抢购 | 🟢 | Redis Lua 原子操作 + 分布式锁 |
+| ✅ 初始化库存 | 🟢 | MySQL → Redis 同步 + 清空用户记录 |
+| ✅ 防重复购买 | 🟢 | Redis Set 记录已购买用户 |
+| ✅ 缓存空值防穿透 | 🟢 | 文章缓存空值防恶意查询 |
+
 ### 📊 仪表盘模块
 | 功能 | 状态 | 说明 |
 |------|:----:|------|
@@ -202,7 +229,8 @@ reg-login/
 │   │   ├── ❤️ LikeController.java          # 点赞接口（点赞/取消/数量/状态）
 │   │   ├── 📤 UploadController.java        # 文件上传
 │   │   ├── 🟥 RedisController.java         # 当前用户测试
-│   │   └── 📊 DashboardController.java     # 仪表盘统计
+│   │   ├── 📊 DashboardController.java     # 仪表盘统计
+│   │   └── ⚡ SeckillGoodsController.java   # 秒杀接口
 │   │
 │   ├── 📂 service/
 │   │   ├── 👤 UserService.java             # 注册/登录/用户管理
@@ -210,19 +238,24 @@ reg-login/
 │   │   ├── 📂 CategoryService.java         # 分类 CRUD
 │   │   ├── 💬 CommentService.java          # 评论 发表/查询/删除
 │   │   ├── ❤️ LikeService.java             # 点赞逻辑（Redis Set）
-│   │   └── 📊 DashboardService.java        # 仪表盘统计
+│   │   ├── 📊 DashboardService.java        # 仪表盘统计
+│   │   └── ⚡ SeckillGoodsService.java      # 秒杀逻辑（分布式锁 + Lua）
 │   │
 │   ├── 📂 mapper/
 │   │   ├── 👤 UserMapper.java              # 用户 SQL（注解式）
 │   │   ├── 📝 ArticleMapper.java           # 文章 SQL（注解式 + 动态SQL）
 │   │   ├── 📂 CategoryMapper.java          # 分类 SQL
-│   │   └── 💬 CommentMapper.java           # 评论 SQL
+│   │   ├── 💬 CommentMapper.java           # 评论 SQL
+│   │   ├── ⚡ SeckillGoodsMapper.java       # 秒杀商品 SQL
+│   │   └── ⚡ SeckillOrderMapper.java       # 秒杀订单 SQL
 │   │
 │   ├── 📂 entity/
 │   │   ├── 👤 User.java                    # 用户实体
 │   │   ├── 📝 Article.java                 # 文章实体
 │   │   ├── 📂 Category.java                # 分类实体
-│   │   └── 💬 Comment.java                 # 评论实体
+│   │   ├── 💬 Comment.java                 # 评论实体
+│   │   ├── ⚡ SeckillGoods.java             # 秒杀商品实体
+│   │   └── ⚡ SeckillOrder.java             # 秒杀订单实体
 │   │
 │   ├── 📂 dto/
 │   │   ├── 📥 LoginRequest.java            # 登录请求 DTO
@@ -308,15 +341,34 @@ reg-login/
 | 👤 `create_user` | `VARCHAR(50)` | NOT NULL | 评论人 |
 | 🕐 `create_time` | `DATETIME` | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
 
+### 📊 seckill_goods 表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| 🔑 `id` | `BIGINT` | PK, AUTO_INCREMENT | 主键 |
+| 📛 `name` | `VARCHAR(200)` | NOT NULL | 商品名称 |
+| 📦 `stock` | `INT` | NOT NULL, DEFAULT 0 | 库存数量 |
+| 🕐 `create_time` | `DATETIME` | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+
+### 📊 seckill_order 表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| 🔑 `id` | `BIGINT` | PK, AUTO_INCREMENT | 主键 |
+| 👤 `user_id` | `BIGINT` | NOT NULL | 用户 ID |
+| 🎁 `goods_id` | `BIGINT` | NOT NULL | 商品 ID |
+| 🕐 `create_time` | `DATETIME` | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+
 ### 🟥 Redis Key 设计
 | Key | 类型 | Value | TTL | 说明 |
 |------|------|------|-----|------|
 | `login:{username}` | String | JWT Token | 7 天 | 登录状态，登出时删除 |
 | `article:detail:{id}` | String | Article JSON | 永久 | 文章详情缓存 |
 | `article:{id}:like` | Set | 用户名集合 | 永久 | 点赞用户集合 |
+| `article:lock:{id}` | String | UUID | 10s | 文章缓存击穿锁 |
+| `seckill:stock:{id}` | String | 库存数量 | 永久 | 秒杀商品 Redis 库存 |
+| `seckill:user:{id}` | Set | 用户ID集合 | 永久 | 已购买该商品的用户 |
+| `seckill:lock:{id}` | String | UUID | 10s | 秒杀分布式锁 |
 
 ---
-
 ## 📡 API 接口文档
 
 > 🌐 基础路径：`http://localhost:8083`
@@ -383,6 +435,14 @@ reg-login/
 | 🔴 DELETE | `/like` | 👎 取消点赞 | `?articleId=1` |
 | 🔵 GET | `/like/count` | 🔢 点赞数量 | `?articleId=1` |
 | 🔵 GET | `/like/status` | ❓ 是否已点赞 | `?articleId=1` |
+
+### ⚡ 秒杀接口（需登录）
+
+| 方法 | 路径 | 说明 | 参数 |
+|:----:|------|------|------|
+| 🔵 GET | `/seckill/list` | 📋 秒杀商品列表 | — |
+| 🟢 POST | `/seckill` | ⚡ 秒杀抢购 | `?goodsId=1` |
+| 🟢 POST | `/seckill/init` | 🔄 初始化库存 | `?goodsId=1` |
 
 ### 📊 仪表盘接口（需登录）
 
@@ -580,10 +640,26 @@ registry.addMapping("/**")
 - 📄 用户分页查询
 - 👤 用户视图对象（VO，不暴露密码）
 
+### ✅ 阶段八：秒杀模块
+- ⚡ 秒杀商品列表查询
+- 🔒 Redis 分布式锁（UUID + Lua 安全释放）
+- 📜 Lua 原子脚本（库存检查 + 扣减 + 防重复）
+- 🟥 Redis Set 记录已购用户
+- 💾 Redis → MySQL 最终一致性同步
+- 🔄 库存初始化（清空历史购买记录）
+
+### ✅ 阶段九：缓存优化
+- 🛡️ 文章缓存空值防穿透（NULL_VALUE）
+- 🔒 文章缓存热点锁防击穿（双重检查 + 锁竞争递归）
+- 🎲 缓存 TTL 随机化防雪崩
+- 🔧 分布式锁升级（UUID 值 + Lua 脚本安全释放）
+- 🗑️ 清理旧方案残留（SeckillOrderMapper.countOrder）
+- 🐛 修复 Netty 内部 API 引用（ThreadLocalRandom）
+
 ---
 
 <p align="center">
-  🎯 <b>项目完成度：~95%</b> &nbsp;|&nbsp;
+  🎯 <b>项目完成度：~98%</b> &nbsp;|&nbsp;
   🐙 <b>适合校招简历</b> &nbsp;|&nbsp;
   🚀 <b>持续迭代中...</b>
 </p>

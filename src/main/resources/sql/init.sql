@@ -58,3 +58,22 @@ CREATE TABLE IF NOT EXISTS `comment` (
     PRIMARY KEY (`id`),
     KEY `idx_article_id` (`article_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 6. 秒杀商品表
+CREATE TABLE IF NOT EXISTS `seckill_goods` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT  COMMENT '主键',
+    `name`        VARCHAR(200) NOT NULL                 COMMENT '商品名称',
+    `stock`       INT          NOT NULL DEFAULT 0       COMMENT '库存数量',
+    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 7. 秒杀订单表
+CREATE TABLE IF NOT EXISTS `seckill_order` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT  COMMENT '主键',
+    `user_id`     BIGINT       NOT NULL                 COMMENT '用户ID',
+    `goods_id`    BIGINT       NOT NULL                 COMMENT '商品ID',
+    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_goods` (`user_id`, `goods_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

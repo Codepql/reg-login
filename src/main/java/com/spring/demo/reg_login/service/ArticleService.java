@@ -1,11 +1,16 @@
 package com.spring.demo.reg_login.service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import com.alibaba.fastjson2.JSON;
@@ -28,6 +33,26 @@ public class ArticleService {
 
     private final StringRedisTemplate redisTemplate;
 
+    private static final String NULL_VALUE = "NULL";
+
+    private static final String LOCK_PREFIX = "article:lock:";
+
+    private static final DefaultRedisScript<Long> UNLOCK_SCRIPT;
+    static {
+        UNLOCK_SCRIPT = new DefaultRedisScript<>();
+        UNLOCK_SCRIPT.setScriptText(
+                """
+                if redis.call('get', KEYS[1]) == ARGV[1]
+                then
+                    return redis.call('del', KEYS[1])
+                else
+                    return 0
+                end
+                """
+        );
+        UNLOCK_SCRIPT.setResultType(Long.class);
+    }
+
     // list
     public List<Article> list() {
         return articleMapper.findAll();
@@ -44,12 +69,18 @@ public class ArticleService {
         articleMapper.insert(article);
     }
 
-    // 查详情
+    // 查详情（Redis 缓存 + 分布式锁防击穿 + 空值缓存防穿透）
     public Article detail(Long id) {
 
         String key = "article:detail:" + id;
         String json = redisTemplate.opsForValue().get(key);
 
+        // 空值缓存：防止缓存穿透
+        if (NULL_VALUE.equals(json)) {
+            throw new RuntimeException("文章不存在");
+        }
+
+        // 缓存命中
         if (json != null) {
             redisTemplate.opsForValue().increment(
                 "article:view:" + id
@@ -57,16 +88,72 @@ public class ArticleService {
             return JSON.parseObject(json, Article.class);
         }
 
-        Article article = articleMapper.findById(id);
+        // 缓存未命中 — 加分布式锁，只有一个线程回源 MySQL
+        String lockKey   = LOCK_PREFIX + id;
+        String lockValue = UUID.randomUUID().toString();
 
-        if (article == null) {
-            throw new RuntimeException("文章不存在");
+        Boolean success = redisTemplate.opsForValue()
+                        .setIfAbsent(lockKey, lockValue, 10, TimeUnit.SECONDS);
+
+        if (Boolean.FALSE.equals(success)) {
+            // 未拿到锁，短暂等待后递归重试（此时其他线程正在回源）
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("系统繁忙，请稍后重试");
+            }
+            return detail(id);
         }
 
-        redisTemplate.opsForValue().set(key, JSON.toJSONString(article));
+        try {
+            // 双重检查：拿到锁后再次检查缓存（可能前一个线程已经写入）
+            json = redisTemplate.opsForValue().get(key);
+            if (json != null) {
+                if (NULL_VALUE.equals(json)) {
+                    throw new RuntimeException("文章不存在");
+                }
+                redisTemplate.opsForValue().increment("article:view:" + id);
+                return JSON.parseObject(json, Article.class);
+            }
 
-        redisTemplate.opsForValue().increment("article:view:" + id);
-        return article;
+            Article article = articleMapper.findById(id);
+
+            if (article == null) {
+                // 缓存空值，防止缓存穿透
+                redisTemplate.opsForValue().set(
+                        key,
+                        NULL_VALUE,
+                        5,
+                        TimeUnit.MINUTES
+                );
+                throw new RuntimeException("文章不存在");
+            }
+
+            // 缓存随机过期时间，防止缓存雪崩
+            long expire = 30 + ThreadLocalRandom.current().nextInt(10);
+
+            redisTemplate.opsForValue().set(
+                    key,
+                    JSON.toJSONString(article),
+                    expire,
+                    TimeUnit.MINUTES
+            );
+
+            redisTemplate.opsForValue().increment(
+                    "article:view:" + id
+            );
+
+            return article;
+
+        } finally {
+            // 原子解锁：只有锁的持有者才能释放
+            redisTemplate.execute(
+                UNLOCK_SCRIPT,
+                Collections.singletonList(lockKey),
+                lockValue
+            );
+        }
     }
 
     // 修改
