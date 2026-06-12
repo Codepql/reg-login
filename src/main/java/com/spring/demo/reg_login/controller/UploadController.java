@@ -36,7 +36,7 @@ public class UploadController {
         // 保存文件
         file.transferTo(new File(uploadPath + fileName));
 
-        return Result.success("http://localhost:8083/upload/" + fileName);
+        return Result.success("http://localhost:8080/upload/" + fileName);
     }
 
 }

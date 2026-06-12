@@ -168,7 +168,7 @@
     ↓
 📁 本地存储（D:/Full_Stack/project/spring-boot/upload/）
     ↓
-🔗 返回访问 URL（http://localhost:8083/upload/xxx.jpg）
+🔗 返回访问 URL（http://localhost:8080/upload/xxx.jpg）
     ↓
 🖼️  博客封面引用
     ↓
@@ -371,7 +371,7 @@ reg-login/
 ---
 ## 📡 API 接口文档
 
-> 🌐 基础路径：`http://localhost:8083`
+> 🌐 基础路径：`http://localhost:8080`
 >
 > 🔐 除白名单外，所有接口需在 Header 中携带：`Authorization: <token>`
 
@@ -574,7 +574,7 @@ mysql -u root -p < src/main/resources/sql/init.sql
 ./mvnw spring-boot:run        # Windows: mvnw.cmd spring-boot:run
 
 # ⑤ 验证
-curl http://localhost:8083/hello
+curl http://localhost:8080/hello
 # → hello spring boot
 ```
 

@@ -8,7 +8,7 @@ public class FileUtil {
         if (fileUrl == null || fileUrl.isEmpty()) {
             return;
         }
-        String prefix = "http://localhost:8083/upload/";
+        String prefix = "http://localhost:8080/upload/";
         String fileName = fileUrl.replace(prefix, "");
         File file = new File("D:/Full_Stack/project/spring-boot/upload/" + fileName);
         if (file.exists()) {

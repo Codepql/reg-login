@@ -1,0 +1,13 @@
+.git
+.gitignore
+.idea
+*.iml
+target/classes/
+target/generated-sources/
+target/maven-status/
+target/maven-archiver/
+logs/
+*.md
+Dockerfile
+.dockerignore
+.vscode
